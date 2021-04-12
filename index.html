@@ -1,32 +1,87 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset=utf-8 />
-<title>Ontario Covid19 Hot Postals</title>
-<meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
-<script src='https://api.mapbox.com/mapbox.js/v3.3.1/mapbox.js'></script>
-<link href='https://api.mapbox.com/mapbox.js/v3.3.1/mapbox.css' rel='stylesheet' />
+<meta charset="utf-8">
+<title>Display a map on a webpage</title>
+<meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+<link href="https://api.mapbox.com/mapbox-gl-js/v2.2.0/mapbox-gl.css" rel="stylesheet">
+<script src="https://api.mapbox.com/mapbox-gl-js/v2.2.0/mapbox-gl.js"></script>
+<script src='https://api.tiles.mapbox.com/mapbox-gl-js/v2.2.0/mapbox-gl.js'></script>
+<link href='https://api.tiles.mapbox.com/mapbox-gl-js/v2.2.0/mapbox-gl.css' rel='stylesheet' />
+<script src='https://code.jquery.com/jquery-3.4.1.min.js'></script>
 <style>
-  body { margin:0; padding:0; }
-  #map { position:absolute; top:0; bottom:0; width:100%; }
+body { margin: 0; padding: 0; }
+#map { position: absolute; top: 0; bottom: 0; width: 100%; }
+.eleInfo {
+  position: absolute;
+  font-family: sans-serif;
+  margin-top: 5px;
+  margin-left: 5px;
+  padding: 5px;
+  width: 200px;
+  border: 2px solid black;
+  font-size: 20px;
+  color: #222;
+  background-color: #fff;
+}
 </style>
 </head>
 <body>
-<div id='map'></div>
-
+<div id="map"></div>
+<div class="eleInfo">
+  <div>Longitude: <span id='lng'></span></div>
+  <div>Latitude: <span id='lat'></span></div>
+  <div>Postal Code: <span id='postal'></span></div>
+  <div>Is Hot: <span id='ishot'></span></div>
+</div>
 <script>
-L.mapbox.accessToken = 'pk.eyJ1IjoibTlicmFkeSIsImEiOiJjaXNzNHQ0YmowNmM5MnlwaGh3YjJzd3k3In0.-Fu9YD8Qbrw7xRZ-7Ocn6w';
-var map = L.map('map').setView([43.751,-79.406], 9.5);
+	mapboxgl.accessToken = 'pk.eyJ1IjoibTlicmFkeSIsImEiOiJjaXNzNHQ0YmowNmM5MnlwaGh3YjJzd3k3In0.-Fu9YD8Qbrw7xRZ-7Ocn6w';
+    // Create the map
+    var map = new mapboxgl.Map({
+        container: 'map', // container id
+        style: 'mapbox://styles/m9brady/ckn91ggep0mzf17pm9igekwve', // style URL
+        center: [-79.406, 43.751], // starting position [lng, lat]
+        zoom: 12 // starting zoom
+    });
+    
+    // Create variables for the latitude and longitude
+    var lng;
+    var lat;
+    
+    var lngDisplay = document.getElementById('lng');
+    var latDisplay = document.getElementById('lat');
+    var postalDisplay = document.getElementById('postal');
+    var hotDisplay = document.getElementById('ishot');
 
-// Add tiles from the Mapbox Static Tiles API
-// (https://docs.mapbox.com/api/maps/#static-tiles)
-// Tiles are 512x512 pixels and are offset by 1 zoom level
-L.tileLayer(
-    'https://api.mapbox.com/styles/v1/m9brady/ckn91ggep0mzf17pm9igekwve/tiles/{z}/{x}/{y}?access_token=' + L.mapbox.accessToken, {
-        tileSize: 512,
-        zoomOffset: -1,
-        attribution: '© <a href="https://apps.mapbox.com/feedback/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-    }).addTo(map);
+    var marker = new mapboxgl.Marker({
+      'color': '#314ccd'
+    });
+
+    map.on('click', function(e) {
+      // When the map is clicked, set the lng and lat variables equal to the lng and lat properties in the returned lngLat object
+      lng = e.lngLat.lng;
+      lat = e.lngLat.lat;
+      marker.setLngLat(e.lngLat).addTo(map);
+      getPostalIsHot();
+    });
+        
+    function getPostalIsHot() {
+      // Construct the API request
+      var query = 'https://api.mapbox.com/v4/m9brady.63gsxjcy/tilequery/' + lng + ',' + lat + '.json?&limit=1&dedupe&access_token=' + mapboxgl.accessToken;
+      $.ajax({
+        method: 'GET',
+        url: query,
+      }).done(function(data) {
+        // Display the longitude and latitude values
+        lngDisplay.textContent = lng.toFixed(2);
+        latDisplay.textContent = lat.toFixed(2);
+        // Get all the returned features (only 1)
+        var allFeatures = data.features;
+        // Store the returned postal code and hot status
+        postalDisplay.textContent = allFeatures[0].properties.CFSAUID;
+        hotDisplay.textContent = allFeatures[0].properties.hot_spot;
+      });
+}
 </script>
 </body>
 </html>
